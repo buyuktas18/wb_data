@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
-from data_analyser import print_time
 from data_tool import run_program
 import threading
 import time
@@ -12,12 +11,27 @@ window.geometry('600x400')
 files = ''
 filename = []
 
+variables = [0, 0]
 var1 = tk.IntVar()
 var2 = tk.IntVar()
-c1 = tk.Checkbutton(window, text="deviation", variable=var1, onvalue=1, offvalue=0)
+
+def log_c1():
+    global var1
+    global variables
+    variables[0] = var1
+
+def log_c2():
+    global var2
+    global variables
+    variables[1] = var2
+
+c1 = tk.Checkbutton(window, text="deviation", variable=var1, onvalue=1, offvalue=0, command=log_c1)
+c2 = tk.Checkbutton(window, text="change", variable=var2, onvalue=1, offvalue=0, command=log_c2)
+
+variables.append(var1)
+variables.append(var2)
 
 
-c2 = tk.Checkbutton(window, text="change", variable=var2, onvalue=1, offvalue=0)
 
 def select_files():
     global filename
@@ -49,10 +63,11 @@ def count_time(thr):
 
 def start_program():
     global filename
+    global variables
     path = fd.askdirectory()
     print(path)
     #multithreading for not responding problem
-    thread1 = threading.Thread(target=run_program, args=(filename, path,)) 
+    thread1 = threading.Thread(target=run_program, args=(filename, path, variables)) 
     thread2 = threading.Thread(target=count_time, args=[thread1])
     thread1.start()
     thread2.start()

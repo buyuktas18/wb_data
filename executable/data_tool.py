@@ -10,12 +10,13 @@ import pandas as pd
 import pathlib
 from scipy.stats import norm
 import sklearn.covariance
-
+import shutil
+from save_plots import save_plots_st
 
 #we shall store all the file names in this list
 
 
-def run_program(filelist, path):
+def run_program(filelist, path, options):
 
     total = []
 
@@ -304,573 +305,456 @@ def run_program(filelist, path):
         x_axis = np.arange(len(checkpoint_1))
 
 
-        import matplotlib.pyplot as plt
+        
 
         my_path_str = path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]
         my_path = pathlib.Path(my_path_str) 
 
         if my_path.is_dir():
-            print("Folder already exists")
-        else:
+            shutil.rmtree(my_path)
+            
 
 
-            os.mkdir(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp])
+        os.mkdir(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp])
 
-            #cool deviations
+        #cool deviations
+        save_plots_cool(len(checkpoint_1), my_path_str, initial_u_values, terminal_u_values, initial_v_values, terminal_v_values, initial_Lv, terminal_Lv)
 
+        average_u = np.average(initial_u_values)
+        average_v = np.average(initial_v_values)
 
+        average_u_a = np.average(terminal_u_values)
+        average_v_a = np.average(terminal_v_values)
 
+        cool_u_offset.append(average_u)
+        cool_v_offset.append(average_v)
 
-            plt.plot(x_axis, deviation_u, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_u_deviation.png")
-            plt.clf()
-
-            # In[330]:
-
-
-            plt.plot(x_axis, initial_u_values, 'r', x_axis, terminal_u_values, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_u_change.png")
-            plt.clf()
-
-
-            plt.plot(x_axis, deviation_v, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_v_deviation.png")
-            plt.clf()
-
-
-            plt.plot(x_axis, initial_v_values, 'r', x_axis, terminal_v_values, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_v_change.png")
-            plt.clf()
-
-
-            plt.plot(x_axis, deviation_Lv, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_Lv_deviation.png")
-            plt.clf()   
-
-
-            plt.plot(x_axis, initial_Lv, 'r', x_axis, terminal_Lv, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/cool_Lv_change.png")
-            plt.clf()
-
-
-            average_u = np.average(initial_u_values)
-            average_v = np.average(initial_v_values)
-
-            average_u_a = np.average(terminal_u_values)
-            average_v_a = np.average(terminal_v_values)
-
-            cool_u_offset.append(average_u)
-            cool_v_offset.append(average_v)
-
-            cool_u_offset_a.append(average_u_a)
-            cool_v_offset_a.append(average_v_a)
+        cool_u_offset_a.append(average_u_a)
+        cool_v_offset_a.append(average_v_a)
 
 
 
 
-            res = np.sqrt((average_u - initial_u_values)**2+(average_v - initial_v_values)**2)
-            mu, std = norm.fit(res)
-            plt.hist(res, bins=6, density=True, alpha=1, color='g')
+        res = np.sqrt((average_u - initial_u_values)**2+(average_v - initial_v_values)**2)
+        mu, std = norm.fit(res)
+        plt.hist(res, bins=6, density=True, alpha=1, color='g')
 
 
-            cool_mean = mu
-            cool_means.append(cool_mean)
+        cool_mean = mu
+        cool_means.append(cool_mean)
 
-            cool_sdev = std
-            cool_sd.append(cool_sdev)
+        cool_sdev = std
+        cool_sd.append(cool_sdev)
 
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
 
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_cool.png")
-            plt.clf()
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_cool.png")
+        plt.clf()
 
-            cool_max.append(np.max(res))
+        cool_max.append(np.max(res))
 
-            sorted_indexes = res.argsort()
+        sorted_indexes = res.argsort()
 
-            max_cool_values = res[sorted_indexes[-25:][::-1]]
-            max_cool_series = []
-            for k in range(25):
-                max_cool_series.append(serie_numbers[sorted_indexes[-k-1]])
+        max_cool_values = res[sorted_indexes[-25:][::-1]]
+        max_cool_series = []
+        for k in range(25):
+            max_cool_series.append(serie_numbers[sorted_indexes[-k-1]])
+
+    
+
+        #standard values
+        st_initial_u_values = []
+        st_terminal_u_values = []
+        st_initial_v_values = []
+        st_terminal_v_values = []
+        st_initial_Lv = []
+        st_terminal_Lv =[]
+
+        for j in range(len(checkpoint_1)):
+            result = re.search('u= (.*)\tv', lines[checkpoint_1[j]+2])
+            st_initial_u_values.append(result.group(1))
+            result = re.search('u= (.*)\tv', lines[checkpoint_2[j]-1])
+            st_terminal_u_values.append(result.group(1))
+            result = re.search('v= (.*)\tL', lines[checkpoint_1[j]+2])
+            st_initial_v_values.append(result.group(1))
+            result = re.search('v= (.*)\tL', lines[checkpoint_2[j]-1])
+            st_terminal_v_values.append(result.group(1))
+            result = re.search('Lv= (.*) ', lines[checkpoint_1[j]+2])
+            st_initial_Lv.append(result.group(1))
+            result = re.search('Lv= (.*)\ ', lines[checkpoint_2[j]-1])
+            st_terminal_Lv.append(result.group(1))
+
+
+        # In[175]:
+
+
+        st_initial_u_values = np.array(st_initial_u_values)
+        st_initial_u_values = st_initial_u_values.astype(int)
+        st_terminal_u_values = np.array(st_terminal_u_values)
+        st_terminal_u_values = st_terminal_u_values.astype(int)
+        st_deviation_u = np.abs(st_terminal_u_values - st_initial_u_values)
+
+        st_initial_v_values = np.array(st_initial_v_values)
+        st_initial_v_values = st_initial_v_values.astype(int)
+        st_terminal_v_values = np.array(st_terminal_v_values)
+        st_terminal_v_values = st_terminal_v_values.astype(int)
+        st_deviation_v = np.abs(st_terminal_v_values - st_initial_v_values)
+
+        st_initial_Lv = np.array(st_initial_Lv)
+        st_initial_Lv = st_initial_Lv.astype(int)
+        st_terminal_Lv = np.array(st_terminal_Lv)
+        st_terminal_Lv = st_terminal_Lv.astype(int)
+        st_deviation_Lv = np.abs(st_terminal_Lv - st_initial_Lv)
+
+
+        # In[176]:
+
+
+        #standard values
+
+
+        # In[177]:
+
+        save_plots_st(len(checkpoint_1), my_path_str, st_initial_u_values, st_terminal_u_values, st_initial_v_values, st_terminal_v_values, st_initial_Lv, st_terminal_Lv)
+
+        st_average_u = np.average(st_initial_u_values)
+        st_average_v = np.average(st_initial_v_values)
+
+        st_average_u_a = np.average(st_terminal_u_values)
+        st_average_v_a = np.average(st_terminal_v_values)
+
+        st_u_offset.append(st_average_u)
+        st_v_offset.append(st_average_v)
+
+        st_u_offset_a.append(st_average_u_a)
+        st_v_offset_a.append(st_average_v_a)
+
+        res = np.sqrt((st_average_u - st_initial_u_values)**2+(st_average_v - st_initial_v_values)**2)
+        mu, std = norm.fit(res)
+
+        st_mean = mu
+        st_means.append(st_mean)
+
+        st_sdev = std
+        st_sd.append(st_sdev)
+
+        plt.hist(res, bins=6, density=True, alpha=1, color='g')
+
+
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
+
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_st.png")
+        plt.clf()
+
+
+        st_max.append(np.max(res))
+
+        sorted_indexes = res.argsort()
+
+        max_st_values = res[sorted_indexes[-25:][::-1]]
+        max_st_series = []
+        for k in range(25):
+            max_st_series.append(serie_numbers[sorted_indexes[-k-1]])
+        
+
+
+
+        #warm values
+        w_initial_u_values = []
+        w_terminal_u_values = []
+        w_initial_v_values = []
+        w_terminal_v_values = []
+        w_initial_Lv = []
+        w_terminal_Lv =[]
+
+        for j in range(len(checkpoint_1)):
+            result = re.search('u= (.*)\tv', lines[checkpoint_2[j]+2])
+            w_initial_u_values.append(result.group(1))
+            result = re.search('u= (.*)\tv', lines[ending_point[j]-2])
+            w_terminal_u_values.append(result.group(1))
+            result = re.search('v= (.*)\tL', lines[checkpoint_2[j]+2])
+            w_initial_v_values.append(result.group(1))
+            result = re.search('v= (.*)\tL', lines[ending_point[j]-2])
+            w_terminal_v_values.append(result.group(1))
+            result = re.search('Lv= (.*) ', lines[checkpoint_2[j]+2])
+            w_initial_Lv.append(result.group(1))
+            result = re.search('Lv= (.*)\ ', lines[ending_point[j]-2])
+            w_terminal_Lv.append(result.group(1))
+
+
+        # In[318]:
+
+
+        w_initial_u_values = np.array(w_initial_u_values)
+        w_initial_u_values = w_initial_u_values.astype(int)
+        w_terminal_u_values = np.array(w_terminal_u_values)
+        w_terminal_u_values = w_terminal_u_values.astype(int)
+        w_deviation_u = np.abs(w_terminal_u_values - w_initial_u_values)
+
+        w_initial_v_values = np.array(w_initial_v_values)
+        w_initial_v_values = w_initial_v_values.astype(int)
+        w_terminal_v_values = np.array(w_terminal_v_values)
+        w_terminal_v_values = w_terminal_v_values.astype(int)
+        w_deviation_v = np.abs(w_terminal_v_values - w_initial_v_values)
+
+        w_initial_Lv = np.array(w_initial_Lv)
+        w_initial_Lv = w_initial_Lv.astype(int)
+        w_terminal_Lv = np.array(w_terminal_Lv)
+        w_terminal_Lv = w_terminal_Lv.astype(int)
+        w_deviation_Lv = np.abs(w_terminal_Lv - w_initial_Lv)
+
+        save_plots_warm(len(checkpoint_1), my_path_str, w_initial_u_values, w_terminal_u_values, w_initial_v_values, w_terminal_v_values, w_initial_Lv, w_terminal_Lv)
+        
+
+
+        w_average_u = np.average(w_initial_u_values)
+        w_average_v = np.average(w_initial_v_values)
+
+        w_average_u_a = np.average(w_terminal_u_values)
+        w_average_v_a = np.average(w_terminal_v_values)
+
+        w_u_offset.append(w_average_u)
+        w_v_offset.append(w_average_v)
+
+        w_u_offset_a.append(w_average_u_a)
+        w_v_offset_a.append(w_average_v_a)
+
+        res = np.sqrt((w_average_u - w_initial_u_values)**2+(w_average_v - w_initial_v_values)**2)
+        mu, std = norm.fit(res)
+
+        w_mean = mu
+        warm_means.append(w_mean)
+
+        warm_sd.append(std)
+
+        plt.hist(res, bins=6, density=True, alpha=1, color='g')
+
+
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
+
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_warm.png")
+        plt.clf()
+
+
+
+        file1 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases.txt", "w")
+        for i in range(25):
+            file1.write(str(max_cool_series[i]) + "\t" + str(max_cool_values[i]) + "\n")
+        file1.close()
+
+        file2 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases_st.txt", "w")
+        for i in range(25):
+            file2.write(str(max_st_series[i]) + "\t" + str(max_st_values[i]) + "\n")
+        file2.close()
 
         
 
-            #standard values
-            st_initial_u_values = []
-            st_terminal_u_values = []
-            st_initial_v_values = []
-            st_terminal_v_values = []
-            st_initial_Lv = []
-            st_terminal_Lv =[]
+#1
+        mu, std = norm.fit(initial_u_values)
+        st1.append(std)
+        plt.hist(initial_u_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
+
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_cool.png")
+        plt.clf()
+
+#2
+
+        mu, std = norm.fit(initial_v_values)
+        st2.append(std)
+
+        plt.hist(initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
+
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_cool.png")
+        plt.clf()
+#3
 
-            for j in range(len(checkpoint_1)):
-                result = re.search('u= (.*)\tv', lines[checkpoint_1[j]+2])
-                st_initial_u_values.append(result.group(1))
-                result = re.search('u= (.*)\tv', lines[checkpoint_2[j]-1])
-                st_terminal_u_values.append(result.group(1))
-                result = re.search('v= (.*)\tL', lines[checkpoint_1[j]+2])
-                st_initial_v_values.append(result.group(1))
-                result = re.search('v= (.*)\tL', lines[checkpoint_2[j]-1])
-                st_terminal_v_values.append(result.group(1))
-                result = re.search('Lv= (.*) ', lines[checkpoint_1[j]+2])
-                st_initial_Lv.append(result.group(1))
-                result = re.search('Lv= (.*)\ ', lines[checkpoint_2[j]-1])
-                st_terminal_Lv.append(result.group(1))
+        mu, std = norm.fit(st_initial_u_values)
+        st3.append(std)
 
+        plt.hist(st_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
 
-            # In[175]:
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_st.png")
+        plt.clf()
 
+#4
+        mu, std = norm.fit(st_initial_v_values)
+        st4.append(std)
 
-            st_initial_u_values = np.array(st_initial_u_values)
-            st_initial_u_values = st_initial_u_values.astype(int)
-            st_terminal_u_values = np.array(st_terminal_u_values)
-            st_terminal_u_values = st_terminal_u_values.astype(int)
-            st_deviation_u = np.abs(st_terminal_u_values - st_initial_u_values)
+        plt.hist(st_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
 
-            st_initial_v_values = np.array(st_initial_v_values)
-            st_initial_v_values = st_initial_v_values.astype(int)
-            st_terminal_v_values = np.array(st_terminal_v_values)
-            st_terminal_v_values = st_terminal_v_values.astype(int)
-            st_deviation_v = np.abs(st_terminal_v_values - st_initial_v_values)
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_st.png")
+        plt.clf()
 
-            st_initial_Lv = np.array(st_initial_Lv)
-            st_initial_Lv = st_initial_Lv.astype(int)
-            st_terminal_Lv = np.array(st_terminal_Lv)
-            st_terminal_Lv = st_terminal_Lv.astype(int)
-            st_deviation_Lv = np.abs(st_terminal_Lv - st_initial_Lv)
+#5
 
+        mu, std = norm.fit(w_initial_u_values)
+        st5.append(std)
 
-            # In[176]:
+        plt.hist(w_initial_u_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
 
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_warm.png")
+        plt.clf()
 
-            #standard values
+#6
+        mu, std = norm.fit(w_initial_v_values)
+        st6.append(std)
 
+        plt.hist(w_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, mu, std)
+        plt.plot(x, p, 'k', linewidth=2)
+        title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
+        plt.title(title)
 
-            # In[177]:
+        plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_warm.png")
+        plt.clf()
 
 
-            plt.plot(x_axis, st_deviation_u, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_u_deviation.png")
-            plt.clf()
+        el = sklearn.covariance.EllipticEnvelope(store_precision=True, assume_centered=False, support_fraction=None, contamination=0.0075, random_state=0)
+        d = pd.DataFrame()
+        
+        d['u'] = initial_u_values
+        d['v'] = initial_v_values
+        el.fit(d)
+        d['anomaly'] = el.predict(d)
+        predictions = d.loc[d['anomaly'] < 1]
+        anomalies = []
+        anomaly_index = list(predictions.index.values)
 
 
-            # In[178]:
+        for i in range(len(anomaly_index)):
+            anomalies.append(serie_numbers[anomaly_index[i]])
 
+        file2 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/prediction_seri.txt", "w")
+        for i in anomalies:
+            file2.write(i+"\n")
+        file2.close()
 
-            plt.plot(x_axis, st_initial_u_values, 'r', x_axis, st_terminal_u_values, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_u_change.png")
-            plt.clf()
+        
 
-            # In[357]:
+        predictions.to_excel(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/predictions.xlsx")   
 
 
-            plt.plot(x_axis, st_deviation_v, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_v_deviation.png")
-            plt.clf()
+        number_of_iteration = 0
+        for i in range(len(ending_point)):
+            number_of_iteration += int((ending_point[i]-checkpoint_0[i]-6)/2)
 
-            # In[180]:
 
+        # In[344]:
 
-            plt.plot(x_axis, st_initial_v_values, 'r', x_axis, st_terminal_v_values, 'b')
-            plt.ylim(3000, 5000)
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_v_change.png")
-            plt.clf()
 
-            # In[181]:
+        avg_iteration = number_of_iteration/number_of_ok
+        
 
+        # In[345]:
 
-            plt.plot(x_axis, deviation_Lv, '.')
-            #plt.ylim(0,4000)
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_Lv_deviation.png")
-            plt.clf()
 
-            # In[182]:
+        rate_of_success = number_of_ok/(number_of_ok+number_of_nok)
 
 
-            plt.plot(x_axis, st_initial_Lv, 'r', x_axis, st_terminal_Lv, 'b')
-            plt.ylim(-500, 1000)
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/st_Lv_change.png")
-            plt.clf()
 
-            st_average_u = np.average(st_initial_u_values)
-            st_average_v = np.average(st_initial_v_values)
+        # In[349]:
 
-            st_average_u_a = np.average(st_terminal_u_values)
-            st_average_v_a = np.average(st_terminal_v_values)
 
-            st_u_offset.append(st_average_u)
-            st_v_offset.append(st_average_v)
+        avg_u = (np.average(deviation_u)+np.average(st_deviation_u)+np.average(w_deviation_u))/3
 
-            st_u_offset_a.append(st_average_u_a)
-            st_v_offset_a.append(st_average_v_a)
+        avg_us.append(avg_u)
 
-            res = np.sqrt((st_average_u - st_initial_u_values)**2+(st_average_v - st_initial_v_values)**2)
-            mu, std = norm.fit(res)
 
-            st_mean = mu
-            st_means.append(st_mean)
 
-            st_sdev = std
-            st_sd.append(st_sdev)
+        # In[351]:
 
-            plt.hist(res, bins=6, density=True, alpha=1, color='g')
 
+        avg_v = (np.average(deviation_v)+np.average(st_deviation_v)+np.average(w_deviation_v))/3
 
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
+        avg_vs.append(avg_v)
 
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_st.png")
-            plt.clf()
+        # In[353]:
 
 
-            st_max.append(np.max(res))
+        avg_Lv = (np.average(deviation_Lv)+np.average(st_deviation_Lv)+np.average(w_deviation_Lv))/3
+        avg_Lvs.append(avg_Lv)
+        
 
-            sorted_indexes = res.argsort()
+        total_iteration.append(number_of_iteration)
+        average_iteration.append(avg_iteration)
+        c_rate_of_success.append(rate_of_success)
+        total.append(number_of_ok)
+        
+        warm_max.append(np.max(res))
+        sorted_indexes = res.argsort()
 
-            max_st_values = res[sorted_indexes[-25:][::-1]]
-            max_st_series = []
-            for k in range(25):
-                max_st_series.append(serie_numbers[sorted_indexes[-k-1]])
-            
+        max_w_values = res[sorted_indexes[-25:][::-1]]
+        max_w_series = []
+        for k in range(25):
+            max_w_series.append(serie_numbers[sorted_indexes[-k-1]])
 
+        file3 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases_w.txt", "w")
+        for i in range(25):
+            file3.write(str(max_w_series[i]) + "\t" + str(max_w_values[i]) + "\n")
+        file3.close()
 
+        gain_data = np.zeros((number_of_ok, 9))
+        
+        gain_data[:,0] = list_1
+        gain_data[:,1] = list_2
+        gain_data[:,2] = list_3
+        gain_data[:,3] = list_4
+        gain_data[:,4] = list_5
+        gain_data[:,5] = list_6
+        gain_data[:,6] = list_7
+        gain_data[:,7] = list_8
+        gain_data[:,8] = list_9
 
-            #warm values
-            w_initial_u_values = []
-            w_terminal_u_values = []
-            w_initial_v_values = []
-            w_terminal_v_values = []
-            w_initial_Lv = []
-            w_terminal_Lv =[]
-
-            for j in range(len(checkpoint_1)):
-                result = re.search('u= (.*)\tv', lines[checkpoint_2[j]+2])
-                w_initial_u_values.append(result.group(1))
-                result = re.search('u= (.*)\tv', lines[ending_point[j]-2])
-                w_terminal_u_values.append(result.group(1))
-                result = re.search('v= (.*)\tL', lines[checkpoint_2[j]+2])
-                w_initial_v_values.append(result.group(1))
-                result = re.search('v= (.*)\tL', lines[ending_point[j]-2])
-                w_terminal_v_values.append(result.group(1))
-                result = re.search('Lv= (.*) ', lines[checkpoint_2[j]+2])
-                w_initial_Lv.append(result.group(1))
-                result = re.search('Lv= (.*)\ ', lines[ending_point[j]-2])
-                w_terminal_Lv.append(result.group(1))
-
-
-            # In[318]:
-
-
-            w_initial_u_values = np.array(w_initial_u_values)
-            w_initial_u_values = w_initial_u_values.astype(int)
-            w_terminal_u_values = np.array(w_terminal_u_values)
-            w_terminal_u_values = w_terminal_u_values.astype(int)
-            w_deviation_u = np.abs(w_terminal_u_values - w_initial_u_values)
-
-            w_initial_v_values = np.array(w_initial_v_values)
-            w_initial_v_values = w_initial_v_values.astype(int)
-            w_terminal_v_values = np.array(w_terminal_v_values)
-            w_terminal_v_values = w_terminal_v_values.astype(int)
-            w_deviation_v = np.abs(w_terminal_v_values - w_initial_v_values)
-
-            w_initial_Lv = np.array(w_initial_Lv)
-            w_initial_Lv = w_initial_Lv.astype(int)
-            w_terminal_Lv = np.array(w_terminal_Lv)
-            w_terminal_Lv = w_terminal_Lv.astype(int)
-            w_deviation_Lv = np.abs(w_terminal_Lv - w_initial_Lv)
-
-
-            # In[224]:
-
-
-            plt.plot(x_axis, w_deviation_u, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/w_u_deviation.png")
-            plt.clf()
-
-            # In[225]:
-
-
-            plt.plot(x_axis, w_initial_u_values, 'r', x_axis, w_terminal_u_values, 'b')
-            plt.ylim(0, 2100)
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/w_u_change.png")
-            plt.clf()
-
-            # In[211]:
-
-
-            plt.plot(x_axis, w_deviation_v, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/w_v_deviation.png")
-            plt.clf()
-
-            # In[212]:
-
-
-            plt.plot(x_axis, w_initial_v_values, 'r', x_axis, w_terminal_v_values, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/w_v_change.png")
-            plt.clf()
-
-            # In[320]:
-
-
-            plt.plot(x_axis, w_deviation_Lv, '.')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/w_Lv_deviation.png")
-            plt.clf()
-
-            # In[319]:
-
-
-            plt.plot(x_axis, w_initial_Lv, 'r', x_axis, w_terminal_Lv, 'b')
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]   +"/w_Lv_change.png")
-            plt.clf()
-
-
-            w_average_u = np.average(w_initial_u_values)
-            w_average_v = np.average(w_initial_v_values)
-
-            w_average_u_a = np.average(w_terminal_u_values)
-            w_average_v_a = np.average(w_terminal_v_values)
-
-            w_u_offset.append(w_average_u)
-            w_v_offset.append(w_average_v)
-
-            w_u_offset_a.append(w_average_u_a)
-            w_v_offset_a.append(w_average_v_a)
-
-            res = np.sqrt((w_average_u - w_initial_u_values)**2+(w_average_v - w_initial_v_values)**2)
-            mu, std = norm.fit(res)
-
-            w_mean = mu
-            warm_means.append(w_mean)
-
-            warm_sd.append(std)
-
-            plt.hist(res, bins=6, density=True, alpha=1, color='g')
-
-
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/normal_warm.png")
-            plt.clf()
-
-
-
-            file1 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases.txt", "w")
-            for i in range(25):
-                file1.write(str(max_cool_series[i]) + "\t" + str(max_cool_values[i]) + "\n")
-            file1.close()
-
-            file2 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases_st.txt", "w")
-            for i in range(25):
-                file2.write(str(max_st_series[i]) + "\t" + str(max_st_values[i]) + "\n")
-            file2.close()
-
-            
-
-    #1
-            mu, std = norm.fit(initial_u_values)
-            st1.append(std)
-            plt.hist(initial_u_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_cool.png")
-            plt.clf()
-
-    #2
-
-            mu, std = norm.fit(initial_v_values)
-            st2.append(std)
-
-            plt.hist(initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_cool.png")
-            plt.clf()
-    #3
-
-            mu, std = norm.fit(st_initial_u_values)
-            st3.append(std)
-
-            plt.hist(st_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_st.png")
-            plt.clf()
-
-    #4
-            mu, std = norm.fit(st_initial_v_values)
-            st4.append(std)
-
-            plt.hist(st_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_st.png")
-            plt.clf()
-
-    #5
-
-            mu, std = norm.fit(w_initial_u_values)
-            st5.append(std)
-
-            plt.hist(w_initial_u_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_u_warm.png")
-            plt.clf()
-
-    #6
-            mu, std = norm.fit(w_initial_v_values)
-            st6.append(std)
-
-            plt.hist(w_initial_v_values, bins=6, density=True, alpha=1, color='r', edgecolor='k')
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mean = %.2f,  std = %.2f, N = %i" % (mu, std, number_of_ok)
-            plt.title(title)
-
-            plt.savefig(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/initial_v_warm.png")
-            plt.clf()
-
-
-            el = sklearn.covariance.EllipticEnvelope(store_precision=True, assume_centered=False, support_fraction=None, contamination=0.0075, random_state=0)
-            d = pd.DataFrame()
-            
-            d['u'] = initial_u_values
-            d['v'] = initial_v_values
-            el.fit(d)
-            d['anomaly'] = el.predict(d)
-            predictions = d.loc[d['anomaly'] < 1]
-            anomalies = []
-            anomaly_index = list(predictions.index.values)
-
-
-            for i in range(len(anomaly_index)):
-                anomalies.append(serie_numbers[anomaly_index[i]])
-
-            file2 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/prediction_seri.txt", "w")
-            for i in anomalies:
-                file2.write(i+"\n")
-            file2.close()
-
-            
-
-            predictions.to_excel(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/predictions.xlsx")   
-
-
-            number_of_iteration = 0
-            for i in range(len(ending_point)):
-                number_of_iteration += int((ending_point[i]-checkpoint_0[i]-6)/2)
-
-
-            # In[344]:
-
-
-            avg_iteration = number_of_iteration/number_of_ok
-            
-
-            # In[345]:
-
-
-            rate_of_success = number_of_ok/(number_of_ok+number_of_nok)
-
-
-
-            # In[349]:
-
-
-            avg_u = (np.average(deviation_u)+np.average(st_deviation_u)+np.average(w_deviation_u))/3
-
-            avg_us.append(avg_u)
-
-
-
-            # In[351]:
-
-
-            avg_v = (np.average(deviation_v)+np.average(st_deviation_v)+np.average(w_deviation_v))/3
-
-            avg_vs.append(avg_v)
-
-            # In[353]:
-
-
-            avg_Lv = (np.average(deviation_Lv)+np.average(st_deviation_Lv)+np.average(w_deviation_Lv))/3
-            avg_Lvs.append(avg_Lv)
-            
-
-            total_iteration.append(number_of_iteration)
-            average_iteration.append(avg_iteration)
-            c_rate_of_success.append(rate_of_success)
-            total.append(number_of_ok)
-            
-            warm_max.append(np.max(res))
-            sorted_indexes = res.argsort()
-
-            max_w_values = res[sorted_indexes[-25:][::-1]]
-            max_w_series = []
-            for k in range(25):
-                max_w_series.append(serie_numbers[sorted_indexes[-k-1]])
-
-            file3 = open(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/worst_cases_w.txt", "w")
-            for i in range(25):
-                file3.write(str(max_w_series[i]) + "\t" + str(max_w_values[i]) + "\n")
-            file3.close()
-
-            gain_data = np.zeros((number_of_ok, 9))
-            
-            gain_data[:,0] = list_1
-            gain_data[:,1] = list_2
-            gain_data[:,2] = list_3
-            gain_data[:,3] = list_4
-            gain_data[:,4] = list_5
-            gain_data[:,5] = list_6
-            gain_data[:,6] = list_7
-            gain_data[:,7] = list_8
-            gain_data[:,8] = list_9
-
-            mux = pd.MultiIndex.from_product([['Cool', 'Standard', 'Warm'], ['R Gain', 'G Gain', 'B Gain']])
-            df_gain = pd.DataFrame(gain_data, index = serie_numbers, columns=mux)
-            df_gain.to_excel(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/final_gains.xlsx")
+        mux = pd.MultiIndex.from_product([['Cool', 'Standard', 'Warm'], ['R Gain', 'G Gain', 'B Gain']])
+        df_gain = pd.DataFrame(gain_data, index = serie_numbers, columns=mux)
+        df_gain.to_excel(path+'/'+file_identifier[fp]+"-"+mainboard_names[fp]+"/final_gains.xlsx")
 
 
 

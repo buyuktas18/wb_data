@@ -120,6 +120,16 @@ def export_to_excel(path, number_of_ok,  serie_numbers):
     gain_data[:,7] = list_8
     gain_data[:,8] = list_9
 
+    list_1.clear()
+    list_2.clear()
+    list_3.clear()
+    list_4.clear()
+    list_5.clear()
+    list_6.clear()
+    list_7.clear()
+    list_8.clear()
+    list_9.clear()
+
     mux = pd.MultiIndex.from_product([['Cool', 'Standard', 'Warm'], ['R Gain', 'G Gain', 'B Gain']])
     df_gain = pd.DataFrame(gain_data, index = serie_numbers, columns=mux)
     df_gain.to_excel(path+"/final_gains.xlsx")

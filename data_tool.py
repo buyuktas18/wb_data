@@ -349,11 +349,37 @@ def run_program(filelist, path):
         w_dist_u(my_path_str, w_initial_u_values)
         w_dist_u(my_path_str, w_initial_v_values)
 
+        #create a text file contains inital and terminal coordinate values
+
+        #convert lists to np arrays
+        #for cool mode
+        arr1 = initial_u_values
+        arr2 = initial_v_values
+        arr3 = terminal_u_values
+        arr4 = terminal_v_values
+
+        #for standard mode
+
+        arr5 = st_initial_u_values
+        arr6 = st_initial_v_values
+        arr7 = st_terminal_u_values
+        arr8 = st_terminal_v_values
+
+        #for warm mode
+
+        arr9 = w_initial_u_values
+        arr10 = w_initial_v_values
+        arr11 = w_terminal_u_values
+        arr12 = w_terminal_v_values
+
+        coordinates = [arr1, arr2, arr3, arr4,   
+                        arr5, arr6, arr7, arr8,
+                        arr9, arr10, arr11, arr12]
 
 
         find_gains(lines, checkpoint_0, checkpoint_1, checkpoint_2, end_of_measurements)
         print(number_of_ok)
-        export_to_excel(my_path_str, number_of_ok, serie_numbers)
+        export_to_excel(my_path_str, number_of_ok, serie_numbers, coordinates)
         
         worst_case(my_path_str, max_cool_series, max_cool_values, max_st_series, max_st_values, max_w_series, max_w_values)
 

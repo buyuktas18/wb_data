@@ -108,18 +108,34 @@ def find_gains(lines, checkpoint_0, checkpoint_1, checkpoint_2, end_of_measureme
             if len(list_2) <= i:
                 list_2.append(128)
 
-def export_to_excel(path, number_of_ok,  serie_numbers):
-    gain_data = np.zeros((number_of_ok, 9))
-        
-    gain_data[:,0] = list_1
-    gain_data[:,1] = list_2
-    gain_data[:,2] = list_3
-    gain_data[:,3] = list_4
-    gain_data[:,4] = list_5
-    gain_data[:,5] = list_6
-    gain_data[:,6] = list_7
-    gain_data[:,7] = list_8
-    gain_data[:,8] = list_9
+def export_to_excel(path, number_of_ok,  serie_numbers, coordinates):
+    gain_data = np.zeros((number_of_ok, 21))
+
+
+
+    gain_data[:,0] = coordinates[0]
+    gain_data[:,1] = coordinates[2]
+    gain_data[:,2] = coordinates[1]
+    gain_data[:,3] = coordinates[3]    
+    gain_data[:,4] = list_1
+    gain_data[:,5] = list_2
+    gain_data[:,6] = list_3
+
+    gain_data[:,7] = coordinates[4]
+    gain_data[:,8] = coordinates[6]
+    gain_data[:,9] = coordinates[5]
+    gain_data[:,10] = coordinates[7] 
+    gain_data[:,11] = list_4
+    gain_data[:,12] = list_5
+    gain_data[:,13] = list_6
+
+    gain_data[:,14] = coordinates[8]
+    gain_data[:,15] = coordinates[10]
+    gain_data[:,16] = coordinates[9]
+    gain_data[:,17] = coordinates[11]    
+    gain_data[:,18] = list_7
+    gain_data[:,19] = list_8
+    gain_data[:,20] = list_9
 
     list_1.clear()
     list_2.clear()
@@ -133,9 +149,10 @@ def export_to_excel(path, number_of_ok,  serie_numbers):
 
     
 
-    mux = pd.MultiIndex.from_product([['Cool', 'Standard', 'Warm'], ['R Gain', 'G Gain', 'B Gain']])
+    mux = pd.MultiIndex.from_product([['Cool', 'Standard', 'Warm'], ['initial u', 'final u', 'initial v', 'final v', 'R Gain', 'G Gain', 'B Gain']])
     df_gain = pd.DataFrame(gain_data, index = serie_numbers, columns=mux)
     df_gain.to_excel(path+"/final_gains.xlsx", sheet_name='gains')
+
 
     #find averages based on month
     months = []
